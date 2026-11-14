@@ -1038,3 +1038,39 @@ p {
   from { opacity: 0; transform: translateY(0.75rem); }
   to { opacity: 1; transform: none; }
 }
+
+/* ---------- Galeria: linhas justificadas ----------
+   Cada imagem recebe --r (largura/altura). Numa mesma linha,
+   todas ficam com a mesma altura, sem cortar a arte. */
+.g-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.g-row img {
+  flex: var(--r, 1) 1 0;
+  min-width: 0;
+  width: 0;
+  height: auto;
+  background: var(--ivory);
+}
+
+/* imagem vertical/quadrada sozinha: centralizada, sem ocupar a largura toda */
+.g-row.solo {
+  justify-content: center;
+}
+
+.g-row.solo img {
+  flex: none;
+  width: min(100%, calc(var(--r, 1) / 1.3 * 100%));
+}
+
+@media (max-width: 48rem) {
+  .g-row {
+    gap: 0.5rem;
+  }
+  .gallery {
+    gap: 0.5rem;
+  }
+}
