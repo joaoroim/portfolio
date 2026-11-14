@@ -35,7 +35,7 @@ if (form) {
     const body = encodeURIComponent(
       `Nome: ${name}\nE-mail: ${email}\nProjeto: ${project}\n\n${message}`
     );
-    window.location.href = `mailto:ola@joaoroim.com.br?subject=${encodeURIComponent("Briefing — " + name)}&body=${body}`;
+    window.location.href = `mailto:contato@joaoroim.com.br?subject=${encodeURIComponent("Briefing — " + name)}&body=${body}`;
     form.reset();
     const note = form.querySelector(".form-note");
     if (note) note.textContent = "Abrindo seu e-mail para enviar o briefing.";
