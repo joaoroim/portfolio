@@ -37,7 +37,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: -0.0
 .eyebrow.light { color: rgba(255, 255, 255, 0.55); }
 
 /* ---------- nav ---------- */
-.nav {
+.topbar {
   position: fixed; inset: 0 0 auto 0; z-index: 50;
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   height: 72px; padding: 0 var(--pad);
@@ -56,8 +56,8 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: -0.0
 .nav-toggle span, .nav-toggle span::before { position: absolute; left: 13px; right: 13px; height: 1.5px; background: var(--ink); content: ""; transition: transform 0.4s var(--ease); }
 .nav-toggle span { top: 18px; }
 .nav-toggle span::before { left: 0; right: 0; top: 6px; }
-.nav.is-open .nav-toggle span { transform: translateY(3px) rotate(45deg); }
-.nav.is-open .nav-toggle span::before { transform: translateY(-6px) rotate(-90deg); }
+.topbar.is-open .nav-toggle span { transform: translateY(3px) rotate(45deg); }
+.topbar.is-open .nav-toggle span::before { transform: translateY(-6px) rotate(-90deg); }
 .pill {
   display: inline-flex; align-items: center; gap: 0.6rem;
   height: 42px; padding: 0 1.15rem; border-radius: 999px;
@@ -193,7 +193,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: -0.0
 
 /* ---------- responsive ---------- */
 @media (max-width: 860px) {
-  .nav { grid-template-columns: 1fr auto; height: 64px; }
+  .topbar { grid-template-columns: 1fr auto; height: 64px; }
   .nav-cta { display: none; }
   .nav-toggle { display: block; }
   .nav-links {
@@ -203,7 +203,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: -0.0
   }
   .nav-links a { padding: 1rem 0; border-top: 1px solid var(--line); font-size: 1.1rem; color: var(--ink); }
   .nav-links a.is-active::after { display: none; }
-  .nav.is-open .nav-links { max-height: 320px; }
+  .topbar.is-open .nav-links { max-height: 320px; }
   .hero { padding-top: 6rem; }
   .hero-head { grid-template-columns: 1fr; }
   .hero-title { white-space: normal; }

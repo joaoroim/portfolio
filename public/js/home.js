@@ -1,20 +1,28 @@
-import * as THREE from "three";
-import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-
+// Shared motion layer for every page. The 3D scene (Three.js) is loaded only
+// when the page has a .hero-stage (the home), via dynamic import.
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const finePointer = matchMedia("(pointer: fine)").matches;
 document.documentElement.classList.add("js");
 
+/* ---------------- inner pages: tag elements for the one-way reveals ---------------- */
+if (!document.querySelector(".hero-stage")) {
+  const tag = (sel, attr) => document.querySelectorAll(sel).forEach((el) => { if (!el.closest("[data-split],[data-reveal]")) el.setAttribute(attr, ""); });
+  tag("main h1, main h2", "data-split");
+  tag(".page-hero p:not(.eyebrow)", "data-reveal");
+  tag("main .eyebrow, .project-intro > div, .meta-list, .g-row, .split-copy > p, .split-copy .stats, .method, .filters, .form .field, .form .btn, .contact-side, .next-project, .portrait", "data-reveal");
+  document.querySelectorAll(".catalog .card").forEach((el) => el.setAttribute("data-cursor", ""));
+  document.querySelectorAll(".project-cover").forEach((el) => el.classList.add("reveal-card"));
+}
+
 /* ---------------- top bar: menu + current section ---------------- */
-const nav = document.querySelector(".nav");
+const nav = document.querySelector(".topbar");
 const toggle = nav.querySelector(".nav-toggle");
 toggle.addEventListener("click", () => {
   const open = nav.classList.toggle("is-open");
   toggle.setAttribute("aria-expanded", String(open));
 });
 const links = [...nav.querySelectorAll(".nav-links a")];
-const sections = links.map((a) => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+const sections = links.filter((a) => a.getAttribute("href").startsWith("#")).map((a) => document.querySelector(a.getAttribute("href"))).filter(Boolean);
 const sectionSpy = new IntersectionObserver((entries) => {
   entries.forEach((e) => {
     if (!e.isIntersecting) return;
@@ -117,9 +125,16 @@ if (finePointer && !reduce) {
 
 /* ---------------- 3D stage ---------------- */
 const stage = document.querySelector(".hero-stage");
-const canvas = stage.querySelector("canvas");
 
-function initStage() {
+async function initStage() {
+  if (!stage) return;
+  const canvas = stage.querySelector("canvas");
+  let THREE, RoundedBoxGeometry, RoomEnvironment;
+  try {
+    THREE = await import("three");
+    ({ RoundedBoxGeometry } = await import("three/addons/geometries/RoundedBoxGeometry.js"));
+    ({ RoomEnvironment } = await import("three/addons/environments/RoomEnvironment.js"));
+  } catch (e) { return; }
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });

@@ -1,0 +1,84 @@
+/* Inner pages (Trabalho, Sobre, Contato, cases) in the new home's visual language.
+   Loaded after styles.css (layout) and home.css (tokens, top bar, reveals). */
+
+body { background: var(--bg); color: var(--ink); }
+.wrap { width: auto; max-width: none; margin: 0; padding-inline: var(--pad); }
+
+/* page header */
+.page-hero { padding: calc(72px + clamp(3rem, 8vw, 6.5rem)) 0 clamp(2rem, 4vw, 3rem); border-bottom: 0; }
+.page-hero h1 { font-size: clamp(3rem, 8vw, 8rem); line-height: 0.98; letter-spacing: -0.04em; max-width: 16ch; }
+.page-hero p { font-size: clamp(1.05rem, 1.5vw, 1.35rem); line-height: 1.4; max-width: 38rem; margin-top: 1.4rem; color: var(--muted); }
+.project-hero { padding-top: calc(72px + clamp(2.5rem, 6vw, 5rem)); }
+
+/* case cover + body */
+.project-cover { width: auto; margin: 0 var(--pad) clamp(2.5rem, 5vw, 4rem); border-radius: var(--radius); background: #e4dfd5; }
+.project-cover img { aspect-ratio: 16 / 8; }
+.project-intro { grid-template-columns: 1.3fr 0.7fr; gap: clamp(2rem, 5vw, 5rem); margin-bottom: clamp(3rem, 6vw, 5rem); }
+.project-intro p { font-size: clamp(1.05rem, 1.3vw, 1.2rem); line-height: 1.6; }
+.meta-list { gap: 0; border-top: 1px solid var(--line); }
+.meta-list > div { padding: 1rem 0; border-bottom: 1px solid var(--line); }
+.meta-list dt { color: var(--coral); }
+
+.gallery { gap: clamp(0.6rem, 1.2vw, 1rem); }
+.g-row { gap: clamp(0.6rem, 1.2vw, 1rem); }
+.g-row img, .gallery > img { border-radius: clamp(10px, 1.2vw, 18px); background: #e4dfd5; }
+
+.next-project {
+  margin-top: clamp(4rem, 8vw, 7rem); padding: clamp(1.6rem, 3vw, 2.4rem) 0 0;
+  border-top: 1px solid var(--line); align-items: baseline;
+}
+.next-project span { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.next-project a { font-family: var(--display); font-size: clamp(2rem, 5vw, 4.6rem); letter-spacing: -0.035em; line-height: 1; transition: color 0.3s; }
+.next-project a:hover { color: var(--coral); }
+
+/* work catalog */
+.filters { gap: 0.5rem; margin-bottom: clamp(1.8rem, 4vw, 3rem); }
+.filter { height: 40px; min-height: 0; padding: 0 1rem; border: 0; background: rgba(255, 255, 255, 0.75); color: var(--ink); transition: background 0.3s, color 0.3s; }
+.filter:hover { background: #fff; }
+.filter.is-on { background: var(--graphite); color: #fff; }
+.catalog { column-gap: clamp(0.8rem, 1.6vw, 1.4rem); row-gap: clamp(2.4rem, 5vw, 4rem); }
+.catalog .card-media { border-radius: var(--radius); }
+.catalog .card-body { padding: 0.85rem 0.3rem 1rem; border-bottom: 1px solid var(--line); }
+.catalog .card-body h3 { font-size: clamp(1.3rem, 2vw, 1.8rem); }
+.catalog .card-body span { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+/* about */
+.portrait { border-radius: var(--radius); overflow: hidden; }
+.portrait .stamp { font-family: var(--display); }
+.split-copy h2 { font-size: clamp(2.2rem, 4.6vw, 4.4rem); }
+.method-list { border-top: 1px solid var(--line); }
+.method h3 { font-size: clamp(1.6rem, 2.6vw, 2.4rem); }
+.method .eyebrow { color: var(--coral); }
+
+/* contact */
+.contact-grid { gap: clamp(2rem, 6vw, 6rem); }
+.form { max-width: none; }
+.field input, .field select, .field textarea {
+  border: 1px solid var(--line); border-radius: 14px; background: rgba(255, 255, 255, 0.8);
+  padding: 0.9rem 1rem; font: inherit; color: var(--ink); transition: border-color 0.3s, background 0.3s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--ink); background: #fff; }
+.form .btn-primary { height: 52px; padding: 0 1.6rem; border-radius: 999px; background: var(--graphite); justify-self: start; }
+.form .btn-primary:hover { background: #000; }
+.contact-side { background: var(--graphite); color: #fff; border-radius: var(--radius); padding: clamp(1.8rem, 4vw, 3rem); align-self: start; }
+.contact-side .eyebrow { color: rgba(255, 255, 255, 0.55); }
+.contact-side h2 { font-size: clamp(1.8rem, 3vw, 2.6rem); margin-bottom: 1rem; }
+.contact-side p { color: rgba(255, 255, 255, 0.55); }
+.contact-side a { color: #fff; font-size: 1.1rem; }
+.contact-side a:hover { color: var(--coral); }
+
+/* CTA band reused on inner pages */
+.cta-band { background: transparent; }
+.cta-band .wrap { background: var(--graphite); color: #fff; border-radius: var(--radius); margin-inline: var(--pad); padding: clamp(2.5rem, 7vw, 5rem) clamp(1.5rem, 5vw, 4rem); }
+.cta-band .eyebrow, .cta-band p { color: rgba(255, 255, 255, 0.6); }
+.cta-band h2 { font-size: clamp(2.2rem, 5vw, 4.6rem); }
+.btn-primary { border-radius: 999px; }
+
+@media (max-width: 860px) {
+  .page-hero { padding-top: calc(64px + 3rem); }
+  .project-hero { padding-top: calc(64px + 2.5rem); }
+  .project-intro, .catalog, .contact-grid { grid-template-columns: 1fr; }
+  .project-cover img { aspect-ratio: 4 / 3; }
+  .g-row { gap: 0.5rem; }
+  .cta-band .wrap { margin-inline: var(--pad); }
+}
