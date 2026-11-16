@@ -7,9 +7,9 @@ document.documentElement.classList.add("js");
 /* ---------------- inner pages: tag elements for the one-way reveals ---------------- */
 if (!document.querySelector(".hero-stage")) {
   const tag = (sel, attr) => document.querySelectorAll(sel).forEach((el) => { if (!el.closest("[data-split],[data-reveal]")) el.setAttribute(attr, ""); });
-  tag("main h1, main h2", "data-split");
-  tag(".page-hero p:not(.eyebrow)", "data-reveal");
-  tag("main .eyebrow, .project-intro > div, .meta-list, .g-row, .split-copy > p, .split-copy .stats, .method, .filters, .form .field, .form .btn, .contact-side, .next-project, .portrait", "data-reveal");
+  // above the fold: visible on first paint, CSS-only entrance (no waiting for JS)
+  tag("main h1:not(.intro-rise), main h2", "data-split");
+  tag("main .eyebrow:not(.intro-rise), .project-intro > div, .meta-list, .g-row, .split-copy > p, .split-copy .stats, .method, .filters, .form .field, .form .btn, .contact-side, .next-project, .portrait", "data-reveal");
   document.querySelectorAll(".catalog .card").forEach((el) => el.setAttribute("data-cursor", ""));
   document.querySelectorAll(".project-cover").forEach((el) => el.classList.add("reveal-card"));
 }
@@ -139,7 +139,9 @@ async function initStage() {
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
   } catch (e) { return; } // no WebGL: the dark card stays as a clean backdrop
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.6));
+  // lite mode for phones / modest hardware: fewer pieces, simpler materials, 1x pixels, ~30fps
+  const lite = innerWidth < 860 || (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
+  renderer.setPixelRatio(lite ? 1 : Math.min(devicePixelRatio, 1.5));
   // Neutral tone mapping keeps brand colors true (ACES washed the coral into pink)
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1.0;
@@ -155,19 +157,19 @@ async function initStage() {
   scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
   const mats = {
-    coral: new THREE.MeshPhysicalMaterial({ color: 0xff5352, roughness: 0.42, clearcoat: 0.35, clearcoatRoughness: 0.3, envMapIntensity: 0.55 }),
-    ivory: new THREE.MeshPhysicalMaterial({ color: 0xf4edd8, roughness: 0.45, clearcoat: 0.6 }),
-    graphite: new THREE.MeshPhysicalMaterial({ color: 0x3b3935, roughness: 0.28, metalness: 0.15, clearcoat: 1 }),
-    sand: new THREE.MeshPhysicalMaterial({ color: 0xe8dfc2, roughness: 0.55 }),
+    coral: new (lite ? THREE.MeshStandardMaterial : THREE.MeshPhysicalMaterial)({ color: 0xff5352, roughness: 0.42, clearcoat: 0.35, clearcoatRoughness: 0.3, envMapIntensity: 0.55 }),
+    ivory: new (lite ? THREE.MeshStandardMaterial : THREE.MeshPhysicalMaterial)({ color: 0xf4edd8, roughness: 0.45, clearcoat: 0.6 }),
+    graphite: new (lite ? THREE.MeshStandardMaterial : THREE.MeshPhysicalMaterial)({ color: 0x3b3935, roughness: 0.28, metalness: 0.15, clearcoat: 1 }),
+    sand: new (lite ? THREE.MeshStandardMaterial : THREE.MeshPhysicalMaterial)({ color: 0xe8dfc2, roughness: 0.55 }),
   };
   const geos = {
-    cube: new RoundedBoxGeometry(1.7, 1.7, 1.7, 5, 0.36),
-    sphere: new THREE.SphereGeometry(0.95, 48, 32),
-    slab: new RoundedBoxGeometry(2.6, 1.0, 1.0, 5, 0.36),
+    cube: new RoundedBoxGeometry(1.7, 1.7, 1.7, lite ? 2 : 4, 0.36),
+    sphere: new THREE.SphereGeometry(0.95, lite ? 24 : 36, lite ? 16 : 24),
+    slab: new RoundedBoxGeometry(2.6, 1.0, 1.0, lite ? 2 : 4, 0.36),
   };
 
   const small = innerWidth < 860;
-  const N = small ? 20 : 34;
+  const N = small ? 16 : lite ? 24 : 34;
   const palette = ["coral", "coral", "ivory", "ivory", "graphite", "graphite", "graphite", "sand"];
   const shapes = ["cube", "cube", "sphere", "sphere", "slab"];
   const bodies = [];
@@ -184,7 +186,7 @@ async function initStage() {
       (Math.random() * 2 - 1) * spread.z
     );
     // entrance: rise from below the card, once
-    mesh.position.set(home.x, home.y - 16 - Math.random() * 10, home.z);
+    mesh.position.set(home.x, home.y - 11 - Math.random() * 5, home.z);
     mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
     scene.add(mesh);
     bodies.push({
@@ -223,9 +225,11 @@ async function initStage() {
   document.addEventListener("visibilitychange", () => { running = !document.hidden; });
 
   const tmp = new THREE.Vector3(), clock = new THREE.Clock();
-  const tick = () => {
+  let last = 0;
+  const tick = (now = 0) => {
     requestAnimationFrame(tick);
     if (!visible || !running) { clock.getDelta(); return; }
+    last = now;
     const dt = Math.min(clock.getDelta(), 1 / 30) * 60; // normalize to 60fps steps
     const t = clock.elapsedTime;
 
@@ -276,4 +280,7 @@ async function initStage() {
     still(); new ResizeObserver(still).observe(stage);
   } else tick();
 }
-initStage();
+// start the 3D only after the page has loaded and the browser is idle,
+// so it never delays the first paint or blocks early taps
+const idle = (fn) => (window.requestIdleCallback ? requestIdleCallback(fn, { timeout: 600 }) : setTimeout(fn, 300));
+if (document.readyState === "complete") idle(initStage); else addEventListener("load", () => idle(initStage), { once: true });

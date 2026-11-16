@@ -8,7 +8,7 @@
   <link rel="canonical" href="https://joaoroim.com.br/">
   <link rel="icon" href="public/brand/favicon.svg" type="image/svg+xml">
   <script>document.documentElement.classList.add("js")</script>
-  <link rel="stylesheet" href="public/css/home.css?v=2">
+  <link rel="stylesheet" href="public/css/home.css?v=3">
   <script type="importmap">
     {"imports":{"three":"./public/vendor/three/three.module.min.js","three/addons/":"./public/vendor/three/addons/"}}
   </script>
@@ -33,8 +33,8 @@
     <!-- HERO -->
     <section class="hero" id="inicio">
       <div class="hero-head">
-        <h1 class="hero-title" data-split>Hub criativo<span class="dot">.</span></h1>
-        <p class="hero-lede" data-split>Direção de arte e design multidisciplinar para resolver problemas de negócio com criatividade.</p>
+        <h1 class="hero-title intro-rise">Hub criativo<span class="dot">.</span></h1>
+        <p class="hero-lede intro-rise" style="--delay:120ms">Direção de arte e design multidisciplinar para resolver problemas de negócio com criatividade.</p>
       </div>
       <div class="hero-stage reveal-card">
         <canvas class="stage-canvas" aria-hidden="true"></canvas>
@@ -66,27 +66,27 @@
       </div>
       <div class="work-grid">
         <a class="card card-xl" href="projeto-livin.html" data-cursor>
-          <div class="card-media"><img src="public/work/livin.webp" alt="Livin"></div>
+          <div class="card-media"><img src="public/work/livin-800.webp" srcset="public/work/livin-800.webp 800w, public/work/livin.webp 1600w" sizes="100vw" loading="lazy" decoding="async" alt="Livin"></div>
           <div class="card-info"><h3>Livin</h3><span>Campanha</span></div>
         </a>
         <a class="card" href="projeto-neobella.html" data-cursor>
-          <div class="card-media"><img src="public/work/neobella.webp" alt="Neobella"></div>
+          <div class="card-media"><img src="public/work/neobella-800.webp" srcset="public/work/neobella-800.webp 800w, public/work/neobella.webp 1600w" sizes="(max-width: 860px) 100vw, 50vw" loading="lazy" decoding="async" alt="Neobella"></div>
           <div class="card-info"><h3>Neobella</h3><span>Identidade visual</span></div>
         </a>
         <a class="card" href="projeto-reserva-jacaranda.html" data-cursor>
-          <div class="card-media"><img src="public/work/reserva-jacaranda.webp" alt="Reserva Jacarandá"></div>
+          <div class="card-media"><img src="public/work/reserva-jacaranda-800.webp" srcset="public/work/reserva-jacaranda-800.webp 800w, public/work/reserva-jacaranda.webp 1600w" sizes="(max-width: 860px) 100vw, 50vw" loading="lazy" decoding="async" alt="Reserva Jacarandá"></div>
           <div class="card-info"><h3>Reserva Jacarandá</h3><span>Branding</span></div>
         </a>
         <a class="card" href="projeto-clinai.html" data-cursor>
-          <div class="card-media"><img src="public/work/clinai.webp" alt="Clinai"></div>
+          <div class="card-media"><img src="public/work/clinai-800.webp" srcset="public/work/clinai-800.webp 800w, public/work/clinai.webp 1600w" sizes="(max-width: 860px) 100vw, 50vw" loading="lazy" decoding="async" alt="Clinai"></div>
           <div class="card-info"><h3>Clinai</h3><span>Identidade visual</span></div>
         </a>
         <a class="card" href="projeto-yvy.html" data-cursor>
-          <div class="card-media"><img src="public/work/yvy.webp" alt="YVY"></div>
+          <div class="card-media"><img src="public/work/yvy-800.webp" srcset="public/work/yvy-800.webp 800w, public/work/yvy.webp 1600w" sizes="(max-width: 860px) 100vw, 50vw" loading="lazy" decoding="async" alt="YVY"></div>
           <div class="card-info"><h3>YVY</h3><span>Direção de arte</span></div>
         </a>
         <a class="card card-xl" href="projeto-atlus.html" data-cursor>
-          <div class="card-media"><img src="public/work/atlus.webp" alt="Atlus"></div>
+          <div class="card-media"><img src="public/work/atlus-800.webp" srcset="public/work/atlus-800.webp 800w, public/work/atlus.webp 1600w" sizes="100vw" loading="lazy" decoding="async" alt="Atlus"></div>
           <div class="card-info"><h3>Atlus</h3><span>Identidade visual</span></div>
         </a>
       </div>
@@ -109,7 +109,7 @@
 
     <!-- ABOUT -->
     <section class="about" id="sobre">
-      <div class="about-photo reveal-card"><img src="public/img/joao.webp" alt="Retrato de João Roim"></div>
+      <div class="about-photo reveal-card"><img src="public/img/joao.webp" loading="lazy" decoding="async" alt="Retrato de João Roim"></div>
       <div class="about-copy">
         <p class="eyebrow" data-reveal>Quem sou</p>
         <h2 data-split>Direção de arte com foco em resultado.</h2>
@@ -141,6 +141,6 @@
     <span>Bauru · SP · Brasil</span>
   </footer>
 
-  <script type="module" src="public/js/home.js?v=2"></script>
+  <script type="module" src="public/js/home.js?v=4"></script>
 </body>
 </html>

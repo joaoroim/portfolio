@@ -221,3 +221,8 @@ h1, h2, h3 { font-family: var(--display); font-weight: 400; letter-spacing: -0.0
   .js [data-split] .w > span, .js [data-reveal], .js .reveal-card, .js .card .card-media, .js .card .card-info { transition: none !important; transform: none !important; opacity: 1 !important; clip-path: none !important; }
   .card-media img { transform: none; }
 }
+
+/* ---------- above-the-fold entrance: visible on first paint, CSS only ---------- */
+.intro-rise { animation: intro-rise 1s var(--ease) both; animation-delay: var(--delay, 0ms); }
+@keyframes intro-rise { from { transform: translateY(18px); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .intro-rise { animation: none; } }
