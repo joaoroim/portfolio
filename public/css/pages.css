@@ -13,6 +13,8 @@ body { background: var(--bg); color: var(--ink); }
 /* case cover + body */
 .project-cover { width: auto; margin: 0 var(--pad) clamp(2.5rem, 5vw, 4rem); border-radius: var(--radius); background: #e4dfd5; }
 .project-cover img { aspect-ratio: 16 / 8; }
+.project-cover-video { background: #0b1628; }
+.project-cover video { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
 .project-intro { grid-template-columns: 1.3fr 0.7fr; gap: clamp(2rem, 5vw, 5rem); margin-bottom: clamp(3rem, 6vw, 5rem); }
 .project-intro p { font-size: clamp(1.05rem, 1.3vw, 1.2rem); line-height: 1.6; }
 .meta-list { gap: 0; border-top: 1px solid var(--line); }
