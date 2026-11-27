@@ -1,0 +1,16 @@
+{
+  "name": "Gerador de Formas",
+  "short_name": "Formas",
+  "description": "Gerador das formas 3D do hero de joaoroim.com.br.",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f0ea",
+  "theme_color": "#232220",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

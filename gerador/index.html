@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="googlebot" content="noindex, nofollow">
+<title>Gerador de Formas</title>
+<meta name="description" content="Ferramenta interna: gerador das formas 3D do hero de joaoroim.com.br.">
+<meta name="theme-color" content="#232220">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../public/brand/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Formas">
+<style>
+@font-face { font-family: "Space Grotesk"; src: url("../public/fonts/space-grotesk.woff2") format("woff2"); font-weight: 300 700; font-display: swap; }
+@font-face { font-family: "Work Sans"; src: url("../public/fonts/work-sans.woff2") format("woff2"); font-weight: 300 700; font-display: swap; }
+[hidden] { display: none !important; }
+/* Layout: work column (stage + export) beside a sticky control panel; stacks to one column on phones. */
+:root {
+  --bg: #f3f0ea;
+  --panel: #faf7f4;
+  --ink: #1d1c1a;
+  --muted: rgba(29, 28, 26, 0.6);
+  --line: rgba(29, 28, 26, 0.12);
+  --field: #ffffff;
+  --coral: #ff5352;
+  --coral-ink: #c8302f;
+  --graphite: #232220;
+  --check-a: #e9e4da;
+  --check-b: #f7f4ee;
+  --display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Work Sans", "Helvetica Neue", Arial, sans-serif;
+  --radius: 22px;
+  --ease: cubic-bezier(0.19, 1, 0.22, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151412; --panel: #1d1c1a; --ink: #f3f0ea; --muted: rgba(243, 240, 234, 0.6);
+    --line: rgba(243, 240, 234, 0.12); --field: #262522; --coral-ink: #ff7a79;
+    --check-a: #22211e; --check-b: #2b2a27; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151412; --panel: #1d1c1a; --ink: #f3f0ea; --muted: rgba(243, 240, 234, 0.6);
+  --line: rgba(243, 240, 234, 0.12); --field: #262522; --coral-ink: #ff7a79;
+  --check-a: #22211e; --check-b: #2b2a27; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 32px;
+}
+h1, h2, h3 { font-family: var(--display); font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; margin: 0; text-wrap: balance; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--coral); outline-offset: 2px; }
+.dot { color: var(--coral); }
+.mono { font-variant-numeric: tabular-nums; }
+
+.bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; max-width: 1500px; margin: 0 auto 20px; }
+.bar h1 { font-size: clamp(1.9rem, 4vw, 3rem); }
+.bar p { margin: 6px 0 0; color: var(--muted); max-width: 56ch; }
+.bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--field); cursor: pointer; font-size: 0.9rem; white-space: nowrap;
+  transition: border-color .2s, background .2s;
+}
+.btn:hover { border-color: var(--ink); }
+.btn-dark { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn-dark:hover { background: var(--coral); border-color: var(--coral); color: #fff; }
+.btn-sm { height: 32px; padding: 0 12px; font-size: 0.82rem; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; max-width: 1500px; margin: 0 auto; align-items: start; }
+.work { min-width: 0; display: grid; gap: 16px; }
+
+/* stage */
+.stage-box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: grid; place-items: center; }
+.stage {
+  --ar: 3.1667;
+  position: relative; aspect-ratio: var(--ar); width: min(100%, calc(66vh * var(--ar))); max-width: 100%;
+  border-radius: 12px; overflow: hidden; cursor: crosshair; touch-action: manipulation;
+}
+.stage[data-bg="transparent"] { background: repeating-conic-gradient(var(--check-a) 0 25%, var(--check-b) 0 50%) 0 0 / 22px 22px; }
+.stage[data-bg="site"] { background: radial-gradient(120% 90% at 70% 20%, #34312d 0%, #232220 55%, #161513 100%); }
+.stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.stage-hint { position: absolute; left: 12px; bottom: 10px; font-size: 0.75rem; letter-spacing: .04em; padding: 4px 10px; border-radius: 999px; background: rgba(29,28,26,.62); color: #f3f0ea; pointer-events: none; transition: opacity .4s; }
+.stage:hover .stage-hint { opacity: 0; }
+.stage-msg[hidden] { display: none; }
+.stage-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); }
+
+/* export */
+.export { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; display: grid; gap: 14px; }
+.export-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.export-head h2 { font-size: 1.35rem; }
+.export-head span { color: var(--muted); font-size: 0.85rem; }
+.export-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(124px, 1fr)); gap: 8px; }
+.xbtn {
+  display: grid; gap: 2px; text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--line);
+  background: var(--field); cursor: pointer; transition: border-color .2s, transform .3s var(--ease);
+}
+.xbtn b { font-family: var(--display); font-weight: 500; font-size: 1.05rem; letter-spacing: -0.01em; }
+.xbtn span { font-size: 0.78rem; color: var(--muted); }
+.xbtn:hover:not(:disabled) { border-color: var(--coral); transform: translateY(-1px); }
+.xbtn:hover:not(:disabled) b { color: var(--coral-ink); }
+.xbtn:disabled { opacity: .45; cursor: progress; }
+.status { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; color: var(--muted); min-height: 22px; flex-wrap: wrap; }
+.progress { flex: 0 0 120px; height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 0; background: var(--coral); transition: width .15s; }
+.status-text { min-width: 0; flex: 1 1 200px; }
+.link-btn { background: none; border: 0; padding: 0; color: var(--coral-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-size: 0.85rem; }
+
+/* panel */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; overscroll-behavior: contain; }
+.sec { border-bottom: 1px solid var(--line); }
+.sec:last-child { border-bottom: 0; }
+.sec > summary { list-style: none; cursor: pointer; padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; font-family: var(--display); font-size: 1.05rem; font-weight: 500; letter-spacing: -0.01em; }
+.sec > summary::-webkit-details-marker { display: none; }
+.sec > summary::after { content: ""; width: 9px; height: 9px; border-right: 1.5px solid var(--muted); border-bottom: 1.5px solid var(--muted); transform: rotate(45deg) translateY(-3px); transition: transform .3s var(--ease); }
+.sec[open] > summary::after { transform: rotate(-135deg) translateY(-2px); }
+.sec-body { padding: 0 18px 18px; display: grid; gap: 14px; }
+.ctl { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.ctl label { font-size: 0.86rem; }
+.ctl output { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ctl input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--coral); margin: 0; height: 22px; }
+.ctl select, .field { height: 36px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); padding: 0 10px; min-width: 0; }
+.ctl.inline select { grid-column: 2; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 0.86rem; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--coral); margin: 0; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hint { font-size: 0.78rem; color: var(--muted); margin: -4px 0 0; }
+.sub { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 4px 0 -4px; }
+
+.color-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) 32px; gap: 6px 10px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--field); }
+.color-row input[type="color"] { width: 40px; height: 40px; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 10px; grid-row: span 2; }
+.color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.color-row input[type="color"]::-webkit-color-swatch { border: 1px solid var(--line); border-radius: 10px; }
+.color-row .hex { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; text-transform: uppercase; }
+.color-row select { height: 30px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 0 6px; font-size: 0.8rem; min-width: 0; }
+.color-row .top { display: flex; gap: 8px; align-items: center; justify-content: space-between; min-width: 0; }
+.color-row .w { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.color-row .w input { flex: 1; min-width: 0; accent-color: var(--coral); }
+.color-row .w output { font-size: 0.78rem; color: var(--muted); width: 2.2ch; text-align: right; }
+.color-row .x { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); background: none; cursor: pointer; grid-row: span 2; font-size: 1rem; line-height: 1; }
+.color-row .x:hover:not(:disabled) { border-color: var(--coral); color: var(--coral-ink); }
+.color-row .x:disabled { opacity: .3; cursor: default; }
+
+.size-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; align-items: end; }
+.size-grid label { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted); }
+.size-grid .field { width: 100%; font-variant-numeric: tabular-nums; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: var(--field); }
+.seg label { position: relative; }
+.seg input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.seg span { display: block; padding: 5px 14px; border-radius: 999px; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.seg input:checked + span { background: var(--ink); color: var(--bg); }
+.seg input:focus-visible + span { outline: 2px solid var(--coral); }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); background: var(--ink); color: var(--bg); padding: 10px 18px; border-radius: 999px; font-size: 0.88rem; opacity: 0; pointer-events: none; transition: opacity .3s, transform .4s var(--ease); max-width: calc(100vw - 32px); }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 960px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .panel { position: static; max-height: none; }
+}
+@media (max-width: 520px) {
+  .stage-box { padding: 10px; }
+  .stage-hint { display: none; }
+  .export-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div>
+    <h1>Gerador de formas<span class="dot">.</span></h1>
+    <p>As peças 3D do hero de joaoroim.com.br. Ajuste, empurre com o mouse e exporte em imagem, vetor, página ou animação.</p>
+  </div>
+  <div class="bar-actions">
+    <button class="btn" id="btnInstall" type="button" hidden>Instalar app</button>
+    <button class="btn" id="btnReset" type="button">Restaurar padrão do site</button>
+    <button class="btn btn-dark" id="btnShuffle" type="button">Nova variação</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="work">
+    <div class="stage-box">
+      <div class="stage" id="stage" data-bg="transparent">
+        <canvas id="cv" aria-label="Prévia da composição de formas 3D" role="img"></canvas>
+        <div class="stage-hint">Mova o mouse para empurrar · clique para espalhar</div>
+        <div class="stage-msg" id="stageMsg">Carregando a cena 3D…</div>
+      </div>
+    </div>
+
+    <div class="export">
+      <div class="export-head">
+        <h2>Exportar</h2>
+        <span class="mono" id="outSize">3762 × 1188 px</span>
+      </div>
+      <div class="export-grid" id="exportGrid">
+        <button class="xbtn" type="button" data-export="png"><b>PNG</b><span id="pngNote">Fundo transparente</span></button>
+        <button class="xbtn" type="button" data-export="svg"><b>SVG</b><span>Vetor ilustrado em tons</span></button>
+        <button class="xbtn" type="button" data-export="eps"><b>EPS</b><span>Vetor para Illustrator</span></button>
+        <button class="xbtn" type="button" data-export="html"><b>HTML</b><span>Página estática com a imagem</span></button>
+        <button class="xbtn" type="button" data-export="css"><b>CSS</b><span>Classe com a imagem</span></button>
+        <button class="xbtn" type="button" data-export="video"><b>Vídeo</b><span id="videoNote">MP4 ou WebM</span></button>
+        <button class="xbtn" type="button" data-export="gif"><b>GIF</b><span>Animação em loop</span></button>
+      </div>
+      <div class="status" aria-live="polite">
+        <div class="progress" aria-hidden="true"><i id="prog"></i></div>
+        <span class="status-text" id="statusText">Pronto para exportar.</span>
+        <button class="link-btn" type="button" id="btnCopyCss">Copiar CSS</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel" id="panel" aria-label="Controles"></aside>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script type="importmap">
+{"imports":{"three":"../public/vendor/three/three.module.min.js","three/addons/":"../public/vendor/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+const GIFENC_URL = new URL("../public/vendor/gifenc/gifenc.esm.js", location.href).href;
+const KEY = "roim-gerador-formas-v1";
+const $ = (s, r = document) => r.querySelector(s);
+const V3 = THREE.Vector3;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------------- state (defaults = the live site) ---------------- */
+const DEF = {
+  count: 34, wCube: 2, wSphere: 2, wSlab: 1, sMin: 0.75, sMax: 1.5,
+  colors: [
+    { hex: "#ff5352", w: 2, fin: "satin" },
+    { hex: "#f4edd8", w: 2, fin: "satin" },
+    { hex: "#3b3935", w: 3, fin: "gloss" },
+    { hex: "#e8dfc2", w: 1, fin: "matte" },
+  ],
+  seed: 7, spX: 9.5, spY: 4.6, spZ: 3, offX: 2.2, offY: 0, camZ: 26, fov: 32, float: 0.35,
+  motion: !reduceMotion, interact: true,
+  env: 0.55, light: 1.6, amb: 0.25, az: 37, el: 45, expo: 1,
+  bg: "transparent", bgColor: "#232220",
+  W: 1881, H: 594, scale: 2,
+  tones: 3, embed: true, vidDur: 6, vidLoop: true, gifW: 800, gifFps: 20,
+};
+const FIN = {
+  matte: { label: "Fosco", roughness: 0.6, metalness: 0, clearcoat: 0, ccr: 0.5 },
+  satin: { label: "Acetinado", roughness: 0.42, metalness: 0, clearcoat: 0.4, ccr: 0.3 },
+  gloss: { label: "Brilhante", roughness: 0.28, metalness: 0.15, clearcoat: 1, ccr: 0.12 },
+  metal: { label: "Metálico", roughness: 0.25, metalness: 0.85, clearcoat: 0.5, ccr: 0.2 },
+};
+const clone = (o) => JSON.parse(JSON.stringify(o));
+let S = (() => {
+  try { const raw = localStorage.getItem(KEY); if (raw) return Object.assign(clone(DEF), JSON.parse(raw)); } catch (e) {}
+  return clone(DEF);
+})();
+let persistT;
+const persist = () => { clearTimeout(persistT); persistT = setTimeout(() => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }, 300); };
+
+/* ---------------- ui helpers ---------------- */
+const toastEl = $("#toast"); let toastT;
+function toast(msg) { toastEl.textContent = msg; toastEl.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => toastEl.classList.remove("on"), 2800); }
+const statusText = $("#statusText"), prog = $("#prog");
+function status(msg, p = null) { statusText.textContent = msg; prog.style.width = p == null ? "0%" : `${Math.round(p * 100)}%`; }
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const frameYield = () => new Promise((r) => requestAnimationFrame(() => r()));
+
+/* ---------------- downloads ---------------- */
+async function saveFile(name, blob) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  status(`Salvo: ${name}`); toast(`Salvo: ${name}`);
+}
+
+/* ---------------- three.js scene (mirrors public/js/home.js) ---------------- */
+const stage = $("#stage"), canvas = $("#cv"), stageMsg = $("#stageMsg");
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
+} catch (e) {
+  stageMsg.textContent = "Seu navegador não liberou WebGL, então a cena 3D não pode ser desenhada aqui.";
+  throw e;
+}
+stageMsg.hidden = true;
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.setClearColor(0x000000, 0);
+const gl = renderer.getContext();
+const MAX_DIM = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_VIEWPORT_DIMS)[0], 8192);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.6); scene.add(keyLight);
+const ambLight = new THREE.AmbientLight(0xffffff, 0.25); scene.add(ambLight);
+
+const geos = {
+  cube: new RoundedBoxGeometry(1.7, 1.7, 1.7, 4, 0.36),
+  sphere: new THREE.SphereGeometry(0.95, 48, 32),
+  slab: new RoundedBoxGeometry(2.6, 1.0, 1.0, 4, 0.36),
+};
+const SHAPES = ["cube", "sphere", "slab"];
+const SHAPE_PT = { cube: "cubo", sphere: "esfera", slab: "barra" };
+// rotation that maps each shape onto itself: lets video/GIF loop seamlessly
+const SYM = { cube: Math.PI / 2, sphere: Math.PI * 2, slab: Math.PI };
+
+let mats = [];
+function syncMats() {
+  S.colors.forEach((c, i) => {
+    const f = FIN[c.fin] || FIN.satin;
+    const m = mats[i] || (mats[i] = new THREE.MeshPhysicalMaterial());
+    m.color.set(c.hex); m.roughness = f.roughness; m.metalness = f.metalness;
+    m.clearcoat = f.clearcoat; m.clearcoatRoughness = f.ccr; m.envMapIntensity = S.env; m.needsUpdate = true;
+  });
+  mats.splice(S.colors.length).forEach((m) => m.dispose());
+}
+
+function mulberry32(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function pickW(r, ws) {
+  const tot = ws.reduce((a, b) => a + Math.max(0, b), 0);
+  if (tot <= 0) return Math.min(ws.length - 1, Math.floor(r * ws.length));
+  let x = r * tot;
+  for (let i = 0; i < ws.length; i++) { x -= Math.max(0, ws[i]); if (x < 0) return i; }
+  return ws.length - 1;
+}
+
+let bodies = [];
+function rebuild(entrance = false) {
+  bodies.forEach((b) => scene.remove(b.mesh));
+  bodies = [];
+  syncMats();
+  const rnd = mulberry32(S.seed >>> 0);
+  const lo = Math.min(S.sMin, S.sMax), hi = Math.max(S.sMin, S.sMax);
+  for (let i = 0; i < S.count; i++) {
+    // a fixed number of draws per piece keeps the layout stable when only colors or mix change
+    const R = Array.from({ length: 13 }, rnd);
+    const shape = SHAPES[pickW(R[0], [S.wCube, S.wSphere, S.wSlab])];
+    const ci = pickW(R[1], S.colors.map((c) => c.w));
+    const s = lo + R[2] * (hi - lo);
+    const mesh = new THREE.Mesh(geos[shape], mats[ci]);
+    mesh.scale.setScalar(s);
+    const home = new V3((R[3] * 2 - 1) * S.spX + S.offX, (R[4] * 2 - 1) * S.spY + S.offY, (R[5] * 2 - 1) * S.spZ);
+    mesh.position.copy(home);
+    if (entrance && S.motion) mesh.position.y -= 11 + R[9] * 5;
+    mesh.rotation.set(R[6] * 6, R[7] * 6, R[8] * 6);
+    scene.add(mesh);
+    bodies.push({
+      mesh, home, shape, ci, r: (shape === "slab" ? 1.25 : 1.0) * s,
+      v: new V3(), w: new V3((R[10] - 0.5) * 0.01, (R[11] - 0.5) * 0.01, (R[12] - 0.5) * 0.01),
+      phase: R[12] * Math.PI * 2, snap: null,
+    });
+  }
+}
+
+function syncLight() {
+  const az = (S.az * Math.PI) / 180, el = (S.el * Math.PI) / 180, d = Math.hypot(6, 10, 8);
+  keyLight.position.set(d * Math.cos(el) * Math.sin(az), d * Math.sin(el), d * Math.cos(el) * Math.cos(az));
+  keyLight.intensity = S.light; ambLight.intensity = S.amb;
+  renderer.toneMappingExposure = S.expo;
+  mats.forEach((m) => (m.envMapIntensity = S.env));
+}
+function syncCam(aspect) {
+  camera.fov = S.fov; camera.aspect = aspect; camera.position.set(0, 0, S.camZ);
+  camera.updateProjectionMatrix(); camera.updateMatrixWorld();
+}
+let busy = false; // true while the renderer is sized for an export
+function resize() {
+  if (busy) return;
+  const r = stage.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+  renderer.setSize(r.width, r.height, false);
+  syncCam(r.width / r.height);
+}
+new ResizeObserver(resize).observe(stage);
+
+/* ---------------- interaction + physics (same constants as the site) ---------------- */
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(9, 9), plane = new THREE.Plane(new V3(0, 0, 1), 0);
+const mouse = new V3(999, 999, 0), mousePrev = new V3(999, 999, 0);
+let pointerIn = false;
+stage.addEventListener("pointermove", (e) => {
+  const r = stage.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  pointerIn = true;
+});
+stage.addEventListener("pointerleave", () => { pointerIn = false; });
+stage.addEventListener("click", () => {
+  if (!S.interact || rec || busy) return;
+  bodies.forEach((b) => b.v.add(b.mesh.position.clone().sub(mouse).setZ(0).normalize().multiplyScalar(0.55)));
+});
+
+const tmp = new V3();
+function step(dt, t) {
+  if (pointerIn && S.interact) { ray.setFromCamera(ndc, camera); mousePrev.copy(mouse); ray.ray.intersectPlane(plane, mouse); }
+  else mouse.set(999, 999, 0);
+  const mouseSpeed = Math.min(mouse.distanceTo(mousePrev), 2);
+  for (const b of bodies) {
+    const p = b.mesh.position;
+    tmp.copy(b.home); tmp.y += Math.sin(t * 0.6 + b.phase) * S.float;
+    b.v.addScaledVector(tmp.sub(p), 0.0065 * dt);
+    const dx = p.x - mouse.x, dy = p.y - mouse.y, d2 = dx * dx + dy * dy, R = 3.4 + b.r;
+    if (d2 < R * R) {
+      const d = Math.sqrt(d2) || 0.001, f = (1 - d / R) * (0.09 + mouseSpeed * 0.12) * dt;
+      b.v.x += (dx / d) * f; b.v.y += (dy / d) * f; b.v.z += (Math.random() - 0.5) * f * 0.6;
+      b.w.x += dy * f * 0.02; b.w.y -= dx * f * 0.02;
+    }
+  }
+  for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
+    const a = bodies[i], c = bodies[j];
+    tmp.subVectors(a.mesh.position, c.mesh.position);
+    const min = a.r + c.r, d = tmp.length();
+    if (d < min && d > 0.0001) { tmp.multiplyScalar(((min - d) / d) * 0.12 * dt); a.v.add(tmp); c.v.sub(tmp); }
+  }
+  for (const b of bodies) {
+    b.v.multiplyScalar(Math.pow(0.9, dt));
+    b.mesh.position.addScaledVector(b.v, dt);
+    b.w.multiplyScalar(Math.pow(0.97, dt));
+    b.mesh.rotation.x += (b.w.x + 0.0016) * dt;
+    b.mesh.rotation.y += (b.w.y + 0.0022) * dt;
+    b.mesh.rotation.z += b.w.z * dt;
+  }
+}
+
+// seamless loop: float on a full sine period, spin by each shape's symmetry angle
+const Qtmp = new THREE.Quaternion(), AXIS_Y = new V3(0, 1, 0);
+function snapshot() { bodies.forEach((b) => (b.snap = { p: b.mesh.position.clone(), q: b.mesh.quaternion.clone() })); }
+function restoreSnapshot() { bodies.forEach((b) => { if (!b.snap) return; b.mesh.position.copy(b.snap.p); b.mesh.quaternion.copy(b.snap.q); b.v.set(0, 0, 0); b.snap = null; }); }
+function loopPose(tau) {
+  for (const b of bodies) {
+    const p = b.snap.p;
+    b.mesh.position.set(p.x, p.y + S.float * (Math.sin(Math.PI * 2 * tau + b.phase) - Math.sin(b.phase)), p.z);
+    Qtmp.setFromAxisAngle(AXIS_Y, SYM[b.shape] * tau);
+    b.mesh.quaternion.copy(b.snap.q).multiply(Qtmp);
+  }
+}
+
+let rec = null; // live recording session
+const clock = new THREE.Clock();
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 1 / 30) * 60, t = clock.elapsedTime;
+  if (rec) {
+    const el = (performance.now() - rec.t0) / 1000;
+    if (rec.loop) loopPose(Math.min(el / rec.dur, 1)); else if (S.motion) step(dt, t);
+    renderer.render(scene, camera); rec.paint();
+    status(`Gravando vídeo… ${Math.min(el, rec.dur).toFixed(1)} s de ${rec.dur} s`, el / rec.dur);
+    if (el >= rec.dur) rec.stop();
+    return;
+  }
+  if (busy) return;
+  if (S.motion) step(dt, t);
+  renderer.render(scene, camera);
+}
+
+/* ---------------- backgrounds ---------------- */
+const SITE_BG = { cx: 0.7, cy: 0.2, rx: 1.2, ry: 0.9, stops: [[0, "#34312d"], [0.55, "#232220"], [1, "#161513"]] };
+function paintBg(ctx, w, h) {
+  if (S.bg === "solid") { ctx.fillStyle = S.bgColor; ctx.fillRect(0, 0, w, h); }
+  else if (S.bg === "site") {
+    const cx = SITE_BG.cx * w, cy = SITE_BG.cy * h, rx = SITE_BG.rx * w, ry = SITE_BG.ry * h;
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(rx, ry);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    SITE_BG.stops.forEach(([o, c]) => g.addColorStop(o, c));
+    ctx.fillStyle = g; ctx.fillRect(-cx / rx, -cy / ry, w / rx, h / ry); ctx.restore();
+  }
+}
+function syncBg() {
+  stage.dataset.bg = S.bg;
+  stage.style.background = S.bg === "solid" ? S.bgColor : "";
+  $("#pngNote").textContent = S.bg === "transparent" ? "Fundo transparente" : "Com o fundo escolhido";
+  const bgc = $("#bgColorRow"); if (bgc) bgc.hidden = S.bg !== "solid";
+}
+
+/* ---------------- raster export ---------------- */
+function outDims() {
+  let w = Math.round(S.W * S.scale), h = Math.round(S.H * S.scale);
+  if (Math.max(w, h) > MAX_DIM) {
+    const k = MAX_DIM / Math.max(w, h); w = Math.floor(w * k); h = Math.floor(h * k);
+    toast(`Reduzido para ${w} × ${h} px, o limite desta placa de vídeo.`);
+  }
+  return { w, h };
+}
+function useExportSize(w, h) { busy = true; renderer.setPixelRatio(1); renderer.setSize(w, h, false); syncCam(w / h); }
+function endExportSize() { busy = false; resize(); }
+function rasterAt(w, h) {
+  useExportSize(w, h);
+  renderer.render(scene, camera);
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const x = c.getContext("2d"); paintBg(x, w, h); x.drawImage(renderer.domElement, 0, 0, w, h);
+  endExportSize();
+  return c;
+}
+const toBlob = (c, type = "image/png", q) => new Promise((r) => c.toBlob(r, type, q));
+const blobToDataURL = (b) => new Promise((r) => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
+const baseName = () => `formas-roim-${S.seed}`;
+
+/* ---------------- vector export: projected mesh → toned flat regions ---------------- */
+const vgeoCache = {};
+function vgeo(shape) {
+  if (vgeoCache[shape]) return vgeoCache[shape];
+  const g = geos[shape], p = g.attributes.position, nrm = g.attributes.normal, map = new Map(), verts = [], norms = [], idx = [];
+  const src = g.index ? g.index.array : Array.from({ length: p.count }, (_, i) => i);
+  for (const i of src) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const k = `${Math.round(x * 1e4)},${Math.round(y * 1e4)},${Math.round(z * 1e4)}`;
+    let j = map.get(k);
+    if (j === undefined) { j = verts.length / 3; verts.push(x, y, z); norms.push(0, 0, 0); map.set(k, j); }
+    norms[j * 3] += nrm.getX(i); norms[j * 3 + 1] += nrm.getY(i); norms[j * 3 + 2] += nrm.getZ(i);
+    idx.push(j);
+  }
+  for (let j = 0; j < norms.length; j += 3) { const l = Math.hypot(norms[j], norms[j + 1], norms[j + 2]) || 1; norms[j] /= l; norms[j + 1] /= l; norms[j + 2] /= l; }
+  return (vgeoCache[shape] = { pos: new Float32Array(verts), nrm: new Float32Array(norms), idx: Uint32Array.from(idx) });
+}
+// light thresholds on n·l, and how far each tone moves from the base color (-: toward black, +: toward white)
+const TONE_EDGES = { 1: [], 2: [0.15], 3: [0.15, 0.62], 4: [-0.25, 0.15, 0.62] };
+const TONE_MIX = { 1: [0], 2: [-0.32, 0], 3: [-0.32, 0, 0.24], 4: [-0.44, -0.2, 0, 0.24] };
+const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const rgbHex = (c) => "#" + c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("");
+function shade(hex, m) { const c = hexRgb(hex); return rgbHex(c.map((v) => (m < 0 ? v * (1 + m) : v + (255 - v) * m))); }
+
+// Boundary of a set of directed edges "a>b" (interior edges cancel against their reverse) → closed loops in screen space.
+function traceLoops(set, xy) {
+  const next = new Map();
+  for (const key of set) {
+    const i = key.indexOf(">"), a = +key.slice(0, i), b = +key.slice(i + 1);
+    if (set.has(b + ">" + a)) continue;
+    let l = next.get(a); if (!l) next.set(a, (l = []));
+    l.push(b);
+  }
+  const out = [];
+  for (const [s, list] of next) {
+    while (list.length) {
+      const loop = [s]; let cur = list.pop(), guard = 0;
+      while (cur !== s && guard++ < 200000) {
+        loop.push(cur);
+        const l = next.get(cur); if (!l || !l.length) break;
+        cur = l.pop();
+      }
+      const pts = [];
+      for (const id of loop) {
+        const [x, y] = xy(id), q = pts[pts.length - 1];
+        if (q && Math.abs(q[0] - x) < 0.12 && Math.abs(q[1] - y) < 0.12) continue;
+        if (pts.length >= 2) {
+          const o = pts[pts.length - 2];
+          if (Math.abs((q[0] - o[0]) * (y - o[1]) - (q[1] - o[1]) * (x - o[0])) < 0.01) pts.pop();
+        }
+        pts.push([x, y]);
+      }
+      if (pts.length >= 3) out.push(pts);
+    }
+  }
+  return out;
+}
+
+function buildVector(W, H) {
+  const cam = camera.clone();
+  cam.fov = S.fov; cam.aspect = W / H; cam.position.set(0, 0, S.camZ); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+  const L = keyLight.position.clone().normalize();
+  const K = S.tones, levels = TONE_EDGES[K], mix = TONE_MIX[K];
+  const a = new V3(), b = new V3(), c = new V3(), e1 = new V3(), e2 = new V3(), v = new V3(), n = new V3(), nm = new THREE.Matrix3();
+  const order = bodies.map((bd) => ({ bd, d: bd.mesh.position.distanceTo(cam.position) })).sort((x, y) => y.d - x.d);
+  const pieces = [];
+  for (const { bd } of order) {
+    bd.mesh.updateMatrixWorld(); nm.getNormalMatrix(bd.mesh.matrixWorld);
+    const g = vgeo(bd.shape), nv = g.pos.length / 3;
+    const wp = new Float32Array(nv * 3), f = new Float32Array(nv);
+    for (let i = 0; i < nv; i++) {
+      v.fromArray(g.pos, i * 3).applyMatrix4(bd.mesh.matrixWorld); v.toArray(wp, i * 3);
+      let d = n.fromArray(g.nrm, i * 3).applyMatrix3(nm).normalize().dot(L);
+      for (const lv of levels) if (Math.abs(d - lv) < 1e-6) d = lv + 2e-6; // keep vertices off the cut lines
+      f[i] = d;
+    }
+    // vertex ids: 0..nv-1 originals, then cut points on edges (shared by both neighbouring triangles)
+    const extra = [], cutIds = new Map();
+    const cut = (u, w, li) => {
+      if (u > w) [u, w] = [w, u];
+      const key = `${u}_${w}_${li}`; let id = cutIds.get(key);
+      if (id === undefined) {
+        const t = (levels[li] - f[u]) / (f[w] - f[u]);
+        a.fromArray(wp, u * 3); b.fromArray(wp, w * 3); a.lerp(b, t);
+        id = nv + extra.length / 3; extra.push(a.x, a.y, a.z); cutIds.set(key, id);
+      }
+      return id;
+    };
+    const valOf = (pt) => (pt.u === pt.w ? f[pt.u] : levels[pt.li]);
+    const clip = (poly, li, keepAbove) => {
+      const out = [], lv = levels[li];
+      for (let i = 0; i < poly.length; i++) {
+        const p = poly[i], q = poly[(i + 1) % poly.length];
+        const ip = keepAbove ? valOf(p) >= lv : valOf(p) < lv, iq = keepAbove ? valOf(q) >= lv : valOf(q) < lv;
+        if (ip) out.push(p);
+        if (ip !== iq) {
+          const vs = new Set([p.u, p.w, q.u, q.w]);
+          if (vs.size === 2) { const [u, w] = [...vs]; out.push({ id: cut(u, w, li), u: Math.min(u, w), w: Math.max(u, w), li }); }
+        }
+      }
+      return out;
+    };
+    const groups = Array.from({ length: K }, () => new Set()), all = new Set();
+    const addPoly = (set, poly) => { for (let i = 0; i < poly.length; i++) { const p = poly[i].id, q = poly[(i + 1) % poly.length].id; if (p !== q) set.add(p + ">" + q); } };
+    for (let t = 0; t < g.idx.length; t += 3) {
+      const ia = g.idx[t], ib = g.idx[t + 1], ic = g.idx[t + 2];
+      if (ia === ib || ib === ic || ia === ic) continue;
+      a.fromArray(wp, ia * 3); b.fromArray(wp, ib * 3); c.fromArray(wp, ic * 3);
+      e1.subVectors(b, a); e2.subVectors(c, a); e1.cross(e2);
+      if (e1.lengthSq() < 1e-20) continue;
+      e2.subVectors(cam.position, a);
+      if (e1.dot(e2) <= 0) continue; // back face
+      const tri = [ia, ib, ic].map((i) => ({ id: i, u: i, w: i }));
+      addPoly(all, tri);
+      if (K === 1) continue;
+      for (let k = 0; k < K; k++) {
+        let poly = tri;
+        if (k > 0) poly = clip(poly, k - 1, true);
+        if (k < K - 1 && poly.length) poly = clip(poly, k, false);
+        if (poly.length >= 3) addPoly(groups[k], poly);
+      }
+    }
+    const xy = (id) => {
+      if (id < nv) v.fromArray(wp, id * 3); else v.fromArray(extra, (id - nv) * 3);
+      v.project(cam); return [((v.x + 1) / 2) * W, ((1 - v.y) / 2) * H];
+    };
+    const base = S.colors[bd.ci] ? S.colors[bd.ci].hex : "#888888";
+    pieces.push({
+      shape: bd.shape, base,
+      sil: traceLoops(all, xy),
+      tones: K === 1 ? [] : groups.map((set, k) => ({ color: shade(base, mix[k]), loops: traceLoops(set, xy) })).filter((t) => t.loops.length),
+    });
+  }
+  return pieces;
+}
+const fmt = (n) => (Math.round(n * 100) / 100).toString();
+const svgD = (loops) => loops.map((pts) => "M" + pts.map((p) => fmt(p[0]) + " " + fmt(p[1])).join("L") + "Z").join("");
+
+function makeSVG(W, H) {
+  const pieces = buildVector(W, H);
+  const out = [`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`, `<title>Formas — João Roim · seed ${S.seed}</title>`];
+  if (S.bg === "solid") out.push(`<rect id="fundo" width="${W}" height="${H}" fill="${S.bgColor}"/>`);
+  if (S.bg === "site") {
+    const g = SITE_BG;
+    out.push(`<defs><radialGradient id="fundo-grad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1" gradientTransform="translate(${fmt(g.cx * W)} ${fmt(g.cy * H)}) scale(${fmt(g.rx * W)} ${fmt(g.ry * H)})">${g.stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join("")}</radialGradient></defs>`);
+    out.push(`<rect id="fundo" width="${W}" height="${H}" fill="url(#fundo-grad)"/>`);
+  }
+  out.push(`<g id="formas">`);
+  pieces.forEach((p, i) => {
+    if (!p.sil.length) return;
+    out.push(`<g id="peca-${String(i + 1).padStart(2, "0")}-${SHAPE_PT[p.shape]}">`);
+    out.push(`<path fill="${p.base}" d="${svgD(p.sil)}"/>`);
+    p.tones.forEach((t) => out.push(`<path fill="${t.color}" d="${svgD(t.loops)}"/>`));
+    out.push(`</g>`);
+  });
+  out.push(`</g></svg>`);
+  return out.join("\n");
+}
+
+function makeEPS(W, H) {
+  const pieces = buildVector(W, H);
+  const rgb = (hex) => hexRgb(hex).map((v) => (v / 255).toFixed(3)).join(" ");
+  const L = [
+    "%!PS-Adobe-3.0 EPSF-3.0",
+    `%%BoundingBox: 0 0 ${W} ${H}`,
+    `%%HiResBoundingBox: 0 0 ${W} ${H}`,
+    `%%Title: Formas - Joao Roim - seed ${S.seed}`,
+    "%%Creator: Gerador de formas",
+    `%%CreationDate: ${new Date().toISOString()}`,
+    "%%LanguageLevel: 3",
+    "%%EndComments",
+    "%%BeginProlog",
+    "/m {moveto} bind def /l {lineto} bind def /h {closepath} bind def",
+    "%%EndProlog",
+    "%%Page: 1 1",
+    "save",
+    `0 ${H} translate 1 -1 scale`,
+  ];
+  if (S.bg === "solid") L.push(`${rgb(S.bgColor)} setrgbcolor 0 0 ${W} ${H} rectfill`);
+  if (S.bg === "site") {
+    const g = SITE_BG, s = g.stops;
+    const fn = (c0, c1) => `<< /FunctionType 2 /Domain [0 1] /C0 [${rgb(c0)}] /C1 [${rgb(c1)}] /N 1 >>`;
+    L.push("gsave", `0 0 ${W} ${H} rectclip`, `${fmt(g.cx * W)} ${fmt(g.cy * H)} translate ${fmt(g.rx * W)} ${fmt(g.ry * H)} scale`,
+      `<< /ShadingType 3 /ColorSpace /DeviceRGB /Coords [0 0 0 0 0 1] /Extend [true true] /Function << /FunctionType 3 /Domain [0 1] /Functions [ ${fn(s[0][1], s[1][1])} ${fn(s[1][1], s[2][1])} ] /Bounds [${s[1][0]}] /Encode [0 1 0 1] >> >> shfill`,
+      "grestore");
+  }
+  const path = (loops, color) => {
+    L.push("newpath");
+    loops.forEach((pts) => { L.push(`${fmt(pts[0][0])} ${fmt(pts[0][1])} m`); for (let i = 1; i < pts.length; i++) L.push(`${fmt(pts[i][0])} ${fmt(pts[i][1])} l`); L.push("h"); });
+    L.push(`${rgb(color)} setrgbcolor fill`);
+  };
+  pieces.forEach((p, i) => {
+    if (!p.sil.length) return;
+    L.push(`% peca ${i + 1} (${SHAPE_PT[p.shape]})`);
+    path(p.sil, p.base);
+    p.tones.forEach((t) => path(t.loops, t.color));
+  });
+  L.push("restore", "showpage", "%%Trailer", "%%EOF");
+  return L.join("\n");
+}
+
+/* ---------------- zip (store, no compression) ---------------- */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = (d) => { let c = 0xffffffff; for (let i = 0; i < d.length; i++) c = CRC[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+async function makeZip(files) {
+  const enc = new TextEncoder(), now = new Date();
+  const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  const parts = [], central = []; let offset = 0;
+  for (const f of files) {
+    const data = typeof f.data === "string" ? enc.encode(f.data) : new Uint8Array(await f.data.arrayBuffer());
+    const name = enc.encode(f.name), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, time, true); lh.setUint16(12, date, true); lh.setUint32(14, crc, true);
+    lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(lh.buffer, name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, time, true); ch.setUint16(14, date, true); ch.setUint32(16, crc, true);
+    ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, name.length, true);
+    ch.setUint32(42, offset, true);
+    central.push(ch.buffer, name);
+    offset += 30 + name.length + data.length;
+  }
+  const cdSize = central.reduce((s, p) => s + p.byteLength, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end.buffer], { type: "application/zip" });
+}
+
+/* ---------------- static HTML / CSS ---------------- */
+function cssText(src, w, h) {
+  const d = new Date().toLocaleDateString("pt-BR");
+  return `/* Formas 3D · João Roim · gerado em ${d} · seed ${S.seed} · ${S.W}×${S.H} @${S.scale}x */
+.formas-roim {
+  display: block;
+  width: 100%;
+  max-width: ${S.W}px;
+  aspect-ratio: ${S.W} / ${S.H};
+  background: url("${src}") center / contain no-repeat;
+}
+`;
+}
+function htmlText(src, w, h) {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formas — João Roim</title>
+<style>
+  html, body { margin: 0; }
+  body { min-height: 100vh; display: grid; place-items: center; background: #f3f0ea; padding: 24px; box-sizing: border-box; }
+  .formas-roim { display: block; width: 100%; max-width: ${S.W}px; height: auto; }
+</style>
+</head>
+<body>
+  <img class="formas-roim" src="${src}" width="${S.W}" height="${S.H}" alt="Composição de formas 3D: cubos, esferas e barras">
+</body>
+</html>
+`;
+}
+const exampleHtml = () => `<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Exemplo — formas-roim</title>
+<link rel="stylesheet" href="formas-roim.css">
+<style>body{margin:0;padding:24px;background:#f3f0ea}</style></head>
+<body><div class="formas-roim" role="img" aria-label="Composição de formas 3D"></div></body>
+</html>
+`;
+
+/* ---------------- exporters ---------------- */
+const EXPORTERS = {
+  async png() {
+    const { w, h } = outDims(); status("Renderizando PNG…", 0.3); await frameYield();
+    const blob = await toBlob(rasterAt(w, h));
+    await saveFile(`${baseName()}.png`, blob);
+  },
+  async svg() {
+    status("Traçando vetores…", 0.3); await frameYield();
+    await saveFile(`${baseName()}.svg`, new Blob([makeSVG(S.W, S.H)], { type: "image/svg+xml" }));
+  },
+  async eps() {
+    status("Traçando vetores…", 0.3); await frameYield();
+    await saveFile(`${baseName()}.eps`, new Blob([makeEPS(S.W, S.H)], { type: "application/postscript" }));
+  },
+  async html() {
+    const { w, h } = outDims(); status("Renderizando imagem…", 0.3); await frameYield();
+    const png = await toBlob(rasterAt(w, h));
+    if (S.embed) await saveFile(`${baseName()}.html`, new Blob([htmlText(await blobToDataURL(png), w, h)], { type: "text/html" }));
+    else await saveFile(`${baseName()}-html.zip`, await makeZip([{ name: "index.html", data: htmlText("formas-roim.png", w, h) }, { name: "formas-roim.png", data: png }]));
+  },
+  async css() {
+    const { w, h } = outDims(); status("Renderizando imagem…", 0.3); await frameYield();
+    const png = await toBlob(rasterAt(w, h));
+    if (S.embed) { await saveFile(`${baseName()}.css`, new Blob([cssText(await blobToDataURL(png), w, h)], { type: "text/css" })); return; }
+    await saveFile(`${baseName()}-css.zip`, await makeZip([{ name: "formas-roim.css", data: cssText("formas-roim.png", w, h) }, { name: "formas-roim.png", data: png }, { name: "exemplo.html", data: exampleHtml() }]));
+  },
+  async video() {
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) { status("Este navegador não grava vídeo. Use o GIF."); return; }
+    let { w, h } = outDims();
+    const k = Math.min(1, 1920 / Math.max(w, h));
+    w = Math.max(2, Math.round((w * k) / 2) * 2); h = Math.max(2, Math.round((h * k) / 2) * 2);
+    const alpha = S.bg === "transparent";
+    const cands = alpha
+      ? ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4;codecs=avc1.640028", "video/mp4"]
+      : ["video/mp4;codecs=avc1.640028", "video/mp4", "video/webm;codecs=vp9", "video/webm"];
+    const mime = cands.find((m) => MediaRecorder.isTypeSupported(m));
+    if (!mime) { status("Nenhum formato de vídeo disponível neste navegador. Use o GIF."); return; }
+    const ext = mime.startsWith("video/mp4") ? "mp4" : "webm";
+    const comp = document.createElement("canvas"); comp.width = w; comp.height = h;
+    const cx = comp.getContext("2d");
+    const mr = new MediaRecorder(comp.captureStream(30), { mimeType: mime, videoBitsPerSecond: 16_000_000 });
+    const chunks = []; mr.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    const done = new Promise((r) => (mr.onstop = r));
+    useExportSize(w, h);
+    if (S.vidLoop) snapshot();
+    const paint = () => { cx.clearRect(0, 0, w, h); paintBg(cx, w, h); cx.drawImage(renderer.domElement, 0, 0, w, h); };
+    paint();
+    mr.start(250);
+    rec = { t0: performance.now(), dur: S.vidDur, loop: S.vidLoop, paint, stop() { rec = null; mr.stop(); } };
+    await done;
+    if (S.vidLoop) restoreSnapshot();
+    endExportSize();
+    status("Preparando o arquivo de vídeo…", 1);
+    await saveFile(`${baseName()}.${ext}`, new Blob(chunks, { type: mime.split(";")[0] }));
+    if (alpha && ext === "mp4") toast("Este navegador grava só MP4, sem transparência. O fundo saiu preto.");
+  },
+  async gif() {
+    status("Carregando o codificador de GIF…", 0.02);
+    let enc;
+    try { enc = await import(GIFENC_URL); } catch (e) { status("Não consegui carregar o codificador de GIF. Verifique a conexão e tente de novo."); return; }
+    const { GIFEncoder, quantize, applyPalette } = enc;
+    const gw = Math.min(S.gifW, S.W * S.scale), gh = Math.max(2, Math.round((gw * S.H) / S.W));
+    const frames = Math.round(S.vidDur * S.gifFps), delay = Math.round(1000 / S.gifFps);
+    const alpha = S.bg === "transparent";
+    const comp = document.createElement("canvas"); comp.width = gw; comp.height = gh;
+    const cx = comp.getContext("2d", { willReadFrequently: true });
+    const gif = GIFEncoder();
+    snapshot(); useExportSize(gw, gh);
+    try {
+      for (let i = 0; i < frames; i++) {
+        loopPose(i / frames);
+        renderer.render(scene, camera);
+        cx.clearRect(0, 0, gw, gh); paintBg(cx, gw, gh); cx.drawImage(renderer.domElement, 0, 0, gw, gh);
+        const data = cx.getImageData(0, 0, gw, gh).data;
+        if (alpha) {
+          const palette = quantize(data, 256, { format: "rgba4444", oneBitAlpha: true });
+          const index = applyPalette(data, palette, "rgba4444");
+          const ti = palette.findIndex((p) => p[3] === 0);
+          gif.writeFrame(index, gw, gh, { palette, delay, transparent: ti >= 0, transparentIndex: Math.max(0, ti), dispose: 2 });
+        } else {
+          const palette = quantize(data, 256);
+          gif.writeFrame(applyPalette(data, palette), gw, gh, { palette, delay });
+        }
+        status(`Montando GIF… quadro ${i + 1} de ${frames}`, (i + 1) / frames);
+        if (i % 2 === 1) await sleep(0);
+      }
+      gif.finish();
+    } finally { restoreSnapshot(); endExportSize(); }
+    await saveFile(`${baseName()}.gif`, new Blob([gif.bytes()], { type: "image/gif" }));
+  },
+};
+
+let exporting = false;
+const xbtns = [...document.querySelectorAll("[data-export]")];
+xbtns.forEach((btn) => btn.addEventListener("click", async () => {
+  if (exporting) return;
+  exporting = true; xbtns.forEach((b) => (b.disabled = true));
+  try { await EXPORTERS[btn.dataset.export](); }
+  catch (e) { console.error(e); status("Algo deu errado nessa exportação. Tente uma escala menor."); }
+  finally { exporting = false; xbtns.forEach((b) => (b.disabled = false)); setTimeout(() => (prog.style.width = "0%"), 1200); }
+}));
+
+$("#btnCopyCss").addEventListener("click", async () => {
+  let text;
+  if (S.embed) { const { w, h } = outDims(); text = cssText(await blobToDataURL(await toBlob(rasterAt(w, h))), w, h); }
+  else text = cssText("formas-roim.png");
+  try { await navigator.clipboard.writeText(text); toast(S.embed ? "CSS copiado, com a imagem embutida." : "CSS copiado. Ele aponta para formas-roim.png."); }
+  catch (e) { toast("Não foi possível copiar. Use o botão CSS para baixar o arquivo."); }
+});
+
+/* ---------------- control panel ---------------- */
+const SECTIONS = [
+  { id: "formas", title: "Formas", items: [
+    { k: "count", label: "Quantidade de peças", min: 4, max: 90, step: 1, act: "rebuild" },
+    { sub: "Mix de formas (peso)" },
+    { k: "wCube", label: "Cubos", min: 0, max: 10, step: 1, act: "rebuild" },
+    { k: "wSphere", label: "Esferas", min: 0, max: 10, step: 1, act: "rebuild" },
+    { k: "wSlab", label: "Barras", min: 0, max: 10, step: 1, act: "rebuild" },
+    { sub: "Tamanho das peças" },
+    { k: "sMin", label: "Escala mínima", min: 0.3, max: 2.5, step: 0.05, act: "rebuild" },
+    { k: "sMax", label: "Escala máxima", min: 0.3, max: 2.5, step: 0.05, act: "rebuild" },
+  ] },
+  { id: "cores", title: "Cores", custom: "colors" },
+  { id: "comp", title: "Composição", custom: "seed", items: [
+    { k: "spX", label: "Espalhamento horizontal", min: 0, max: 24, step: 0.1, act: "rebuild" },
+    { k: "spY", label: "Espalhamento vertical", min: 0, max: 14, step: 0.1, act: "rebuild" },
+    { k: "spZ", label: "Profundidade", min: 0, max: 10, step: 0.1, act: "rebuild" },
+    { k: "offX", label: "Deslocar na horizontal", min: -12, max: 12, step: 0.1, act: "rebuild" },
+    { k: "offY", label: "Deslocar na vertical", min: -8, max: 8, step: 0.1, act: "rebuild" },
+    { k: "camZ", label: "Distância da câmera", min: 8, max: 80, step: 0.5, act: "cam" },
+    { k: "fov", label: "Lente (campo de visão)", min: 12, max: 75, step: 1, unit: "°", act: "cam" },
+    { k: "float", label: "Flutuação", min: 0, max: 1.5, step: 0.05, act: "none" },
+    { type: "check", k: "motion", label: "Movimento (desligue para congelar a pose)", act: "none" },
+    { type: "check", k: "interact", label: "Mouse empurra as peças", act: "none" },
+    { type: "buttons", buttons: [["btnFit", "Enquadrar tudo"], ["btnHome", "Voltar à posição inicial"]] },
+  ] },
+  { id: "luz", title: "Material e luz", items: [
+    { k: "env", label: "Reflexo do ambiente", min: 0, max: 2, step: 0.05, act: "light" },
+    { k: "light", label: "Luz principal", min: 0, max: 5, step: 0.05, act: "light" },
+    { k: "amb", label: "Luz ambiente", min: 0, max: 1.5, step: 0.05, act: "light" },
+    { k: "az", label: "Direção da luz", min: -180, max: 180, step: 1, unit: "°", act: "light" },
+    { k: "el", label: "Altura da luz", min: -20, max: 90, step: 1, unit: "°", act: "light" },
+    { k: "expo", label: "Exposição", min: 0.4, max: 2, step: 0.05, act: "light" },
+    { hint: "O acabamento de cada cor (fosco, acetinado, brilhante, metálico) fica na seção Cores. A luz também define os tons do SVG e do EPS." },
+  ] },
+  { id: "saida", title: "Fundo e tamanho", custom: "size" },
+  { id: "opts", title: "Opções de exportação", items: [
+    { type: "select", k: "tones", label: "Tons no vetor", num: true, options: [[1, "1 · silhueta chapada"], [2, "2 tons"], [3, "3 tons"], [4, "4 tons"]], act: "none" },
+    { type: "check", k: "embed", label: "Embutir a imagem no HTML e no CSS", act: "none" },
+    { hint: "Desmarcado, o HTML e o CSS saem num .zip com o arquivo formas-roim.png ao lado e um exemplo de uso." },
+    { k: "vidDur", label: "Duração do vídeo e do GIF", min: 2, max: 20, step: 1, unit: " s", act: "none" },
+    { type: "check", k: "vidLoop", label: "Vídeo em loop perfeito", act: "none" },
+    { hint: "Em loop, as peças flutuam e giram até voltar à pose inicial. Desmarcado, o vídeo grava a cena ao vivo e você pode empurrar as peças durante a gravação." },
+    { type: "select", k: "gifW", label: "Largura do GIF", num: true, options: [[480, "480 px"], [800, "800 px"], [1080, "1080 px"], [1600, "1600 px"]], act: "none" },
+    { type: "select", k: "gifFps", label: "Quadros por segundo do GIF", num: true, options: [[12, "12"], [15, "15"], [20, "20"], [25, "25"]], act: "none" },
+    { hint: "Vídeo transparente sai em WebM no Chrome. GIF transparente tem borda serrilhada; com fundo de cor, fica limpo." },
+  ] },
+];
+
+const panel = $("#panel");
+const decimals = (step) => (String(step).split(".")[1] || "").length;
+const fmtVal = (it, v) => Number(v).toFixed(decimals(it.step)) + (it.unit || "");
+
+function ctlHTML(it) {
+  if (it.sub) return `<p class="sub">${it.sub}</p>`;
+  if (it.hint) return `<p class="hint">${it.hint}</p>`;
+  if (it.type === "buttons") return `<div class="row">${it.buttons.map(([id, l]) => `<button class="btn btn-sm" type="button" id="${id}">${l}</button>`).join("")}</div>`;
+  if (it.type === "check") return `<label class="check"><input type="checkbox" id="c-${it.k}" data-k="${it.k}"> ${it.label}</label>`;
+  if (it.type === "select") return `<div class="ctl inline"><label for="c-${it.k}">${it.label}</label><select id="c-${it.k}" data-k="${it.k}">${it.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join("")}</select></div>`;
+  return `<div class="ctl"><label for="c-${it.k}">${it.label}</label><output id="o-${it.k}" for="c-${it.k}"></output><input type="range" id="c-${it.k}" data-k="${it.k}" min="${it.min}" max="${it.max}" step="${it.step}"></div>`;
+}
+const ITEMS = {};
+function renderPanel() {
+  panel.innerHTML = SECTIONS.map((sec) => {
+    let body = "";
+    if (sec.custom === "colors") body = `<div id="colorList" style="display:grid;gap:8px"></div><div class="row"><button class="btn btn-sm" type="button" id="btnAddColor">Adicionar cor</button></div><p class="hint">O peso define quantas peças recebem cada cor.</p>`;
+    if (sec.custom === "seed") body = `<div class="ctl inline"><label for="c-seed">Variação (seed)</label><div class="row"><input class="field mono" style="width:96px" type="number" id="c-seed" min="0" max="999999" step="1"><button class="btn btn-sm" type="button" id="btnDice">Sortear</button></div></div>`;
+    if (sec.custom === "size") body = `
+      <div class="ctl inline"><label for="c-bg">Fundo</label><select id="c-bg"><option value="transparent">Transparente</option><option value="solid">Cor sólida</option><option value="site">Cartão do site (gradiente grafite)</option></select></div>
+      <div class="ctl inline" id="bgColorRow"><label for="c-bgColor">Cor do fundo</label><input type="color" id="c-bgColor" style="width:56px;height:32px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--field)"></div>
+      <p class="sub">Tamanho da arte</p>
+      <div class="size-grid">
+        <label>Largura (px)<input class="field" type="number" id="c-W" min="64" max="8000" step="1" inputmode="numeric"></label>
+        <button class="btn btn-sm" type="button" id="btnSwap" aria-label="Inverter largura e altura" title="Inverter">⇄</button>
+        <label>Altura (px)<input class="field" type="number" id="c-H" min="64" max="8000" step="1" inputmode="numeric"></label>
+      </div>
+      <div class="ctl inline"><span style="font-size:.86rem">Escala</span><div class="seg" role="radiogroup" aria-label="Escala">${[1, 2, 4].map((s) => `<label><input type="radio" name="scale" value="${s}"><span>${s}x</span></label>`).join("")}</div></div>
+      <p class="hint">A prévia segue a proporção escolhida. PNG, HTML e CSS saem em largura × altura × escala. SVG e EPS saem em largura × altura e podem ser ampliados sem perda.</p>`;
+    body += (sec.items || []).map((it) => { if (it.k) ITEMS[it.k] = it; return ctlHTML(it); }).join("");
+    return `<details class="sec" open><summary>${sec.title}</summary><div class="sec-body">${body}</div></details>`;
+  }).join("") + `<div class="sec" style="padding:16px 18px"><p class="hint" style="margin:0">As configurações ficam guardadas neste navegador.</p></div>`;
+  bindPanel();
+}
+
+function readUI() {
+  Object.values(ITEMS).forEach((it) => {
+    const el = $(`#c-${it.k}`); if (!el) return;
+    if (it.type === "check") el.checked = !!S[it.k];
+    else el.value = S[it.k];
+    const o = $(`#o-${it.k}`); if (o) o.textContent = fmtVal(it, S[it.k]);
+  });
+  $("#c-seed").value = S.seed; $("#c-bg").value = S.bg; $("#c-bgColor").value = S.bgColor;
+  $("#c-W").value = S.W; $("#c-H").value = S.H;
+  document.querySelectorAll('input[name="scale"]').forEach((r) => (r.checked = +r.value === S.scale));
+  renderColors();
+}
+
+function act(a) {
+  if (a === "rebuild") rebuild();
+  else if (a === "light") syncLight();
+  else if (a === "cam") resize();
+  persist();
+}
+
+function bindPanel() {
+  Object.values(ITEMS).forEach((it) => {
+    const el = $(`#c-${it.k}`); if (!el) return;
+    const ev = it.type === "check" || it.type === "select" ? "change" : "input";
+    el.addEventListener(ev, () => {
+      S[it.k] = it.type === "check" ? el.checked : it.type === "select" ? (it.num ? +el.value : el.value) : +el.value;
+      const o = $(`#o-${it.k}`); if (o) o.textContent = fmtVal(it, S[it.k]);
+      act(it.act);
+    });
+  });
+  $("#c-seed").addEventListener("change", (e) => { S.seed = Math.max(0, Math.floor(+e.target.value || 0)); rebuild(true); persist(); });
+  $("#btnDice").addEventListener("click", newVariation);
+  $("#btnFit").addEventListener("click", fitCamera);
+  $("#btnHome").addEventListener("click", () => bodies.forEach((b) => { b.mesh.position.copy(b.home); b.v.set(0, 0, 0); }));
+  $("#c-bg").addEventListener("change", (e) => { S.bg = e.target.value; syncBg(); persist(); });
+  $("#c-bgColor").addEventListener("input", (e) => { S.bgColor = e.target.value; syncBg(); persist(); });
+  const setSize = () => {
+    S.W = Math.max(64, Math.min(8000, Math.round(+$("#c-W").value || DEF.W)));
+    S.H = Math.max(64, Math.min(8000, Math.round(+$("#c-H").value || DEF.H)));
+    $("#c-W").value = S.W; $("#c-H").value = S.H; syncSize(); persist();
+  };
+  $("#c-W").addEventListener("change", setSize); $("#c-H").addEventListener("change", setSize);
+  $("#btnSwap").addEventListener("click", () => { [S.W, S.H] = [S.H, S.W]; $("#c-W").value = S.W; $("#c-H").value = S.H; syncSize(); persist(); });
+  document.querySelectorAll('input[name="scale"]').forEach((r) => r.addEventListener("change", () => { S.scale = +r.value; syncSize(); persist(); }));
+  $("#btnAddColor").addEventListener("click", () => {
+    if (S.colors.length >= 8) { toast("Máximo de 8 cores."); return; }
+    const extra = ["#f6b3a2", "#8d9a8f", "#c9a66b", "#6f7f99", "#ffffff", "#111111"];
+    S.colors.push({ hex: extra[(S.colors.length - 4 + extra.length) % extra.length], w: 1, fin: "satin" });
+    renderColors(); rebuild(); persist();
+  });
+}
+
+function renderColors() {
+  const box = $("#colorList");
+  box.innerHTML = S.colors.map((c, i) => `
+    <div class="color-row">
+      <input type="color" id="col-${i}" value="${c.hex}" aria-label="Cor ${i + 1}">
+      <div class="top"><span class="hex" id="hex-${i}">${c.hex}</span>
+        <select id="fin-${i}" aria-label="Acabamento da cor ${i + 1}">${Object.entries(FIN).map(([k, f]) => `<option value="${k}"${k === c.fin ? " selected" : ""}>${f.label}</option>`).join("")}</select></div>
+      <button class="x" type="button" id="rm-${i}" aria-label="Remover cor ${i + 1}"${S.colors.length <= 1 ? " disabled" : ""}>×</button>
+      <div class="w"><input type="range" id="w-${i}" min="0" max="8" step="1" value="${c.w}" aria-label="Peso da cor ${i + 1}"><output id="wo-${i}">${c.w}</output></div>
+    </div>`).join("");
+  S.colors.forEach((c, i) => {
+    $(`#col-${i}`).addEventListener("input", (e) => { c.hex = e.target.value; $(`#hex-${i}`).textContent = c.hex; syncMats(); persist(); });
+    $(`#fin-${i}`).addEventListener("change", (e) => { c.fin = e.target.value; syncMats(); persist(); });
+    $(`#w-${i}`).addEventListener("input", (e) => { c.w = +e.target.value; $(`#wo-${i}`).textContent = c.w; rebuild(); persist(); });
+    $(`#rm-${i}`).addEventListener("click", () => { S.colors.splice(i, 1); renderColors(); rebuild(); persist(); });
+  });
+}
+
+function syncSize() {
+  stage.style.setProperty("--ar", S.W / S.H);
+  $("#outSize").textContent = `Raster ${S.W * S.scale} × ${S.H * S.scale} px · vetor ${S.W} × ${S.H}`;
+  requestAnimationFrame(resize);
+}
+
+function fitCamera() {
+  const ar = S.W / S.H, t = Math.tan((S.fov * Math.PI) / 360);
+  let need = 8;
+  for (const b of bodies) {
+    const ext = b.r * 1.15;
+    const x = Math.abs(b.home.x) + ext, y = Math.abs(b.home.y) + ext + S.float;
+    need = Math.max(need, y / t + b.home.z + ext, x / (t * ar) + b.home.z + ext);
+  }
+  S.camZ = Math.min(80, Math.round(need * 1.04 * 2) / 2);
+  $("#c-camZ").value = S.camZ; $("#o-camZ").textContent = fmtVal(ITEMS.camZ, S.camZ);
+  resize(); persist();
+}
+function newVariation() { S.seed = Math.floor(Math.random() * 999999); $("#c-seed").value = S.seed; rebuild(true); persist(); }
+
+$("#btnShuffle").addEventListener("click", newVariation);
+$("#btnReset").addEventListener("click", () => {
+  S = clone(DEF); readUI(); syncBg(); syncSize(); syncLight(); rebuild(true); persist(); toast("Padrão do site restaurado.");
+});
+
+// installable app (PWA): offline cache + install prompt where the browser offers one
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+let installEvt = null;
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; $("#btnInstall").hidden = false; });
+$("#btnInstall").addEventListener("click", async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $("#btnInstall").hidden = true; });
+addEventListener("appinstalled", () => toast("Gerador instalado como app."));
+
+renderPanel(); readUI(); syncBg(); syncSize(); syncLight(); resize(); rebuild(true);
+frame();
+</script>
+</body>
+</html>
